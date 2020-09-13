@@ -34,6 +34,21 @@ namespace Pipeline
             return default;
         }
 
+        public bool TryGet<T>(string key, out T @out)
+        {
+            try
+            {
+                @out = Get<T>(key);
+
+                return true;
+            }
+            catch
+            {
+                @out = default(T);
+                return false;
+            }
+        }
+
         public T Get<T>(string key, T defaultValue)
         {
             var r = Get<T>(key);

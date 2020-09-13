@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30223.230
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipeline.Tests", "Pipeline.Tests\Pipeline.Tests.csproj", "{1126D40D-83B0-4ABD-9B2A-AC2AEE2991EA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pipeline", "Pipeline\Pipeline.csproj", "{A0AF2F87-3890-4741-8474-499DCB8D57BD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{1126D40D-83B0-4ABD-9B2A-AC2AEE2991EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1126D40D-83B0-4ABD-9B2A-AC2AEE2991EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1126D40D-83B0-4ABD-9B2A-AC2AEE2991EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1126D40D-83B0-4ABD-9B2A-AC2AEE2991EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0AF2F87-3890-4741-8474-499DCB8D57BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0AF2F87-3890-4741-8474-499DCB8D57BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0AF2F87-3890-4741-8474-499DCB8D57BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0AF2F87-3890-4741-8474-499DCB8D57BD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {60DB7271-C4C1-4634-A4EE-180D9BF7D0C0}
+	EndGlobalSection
+EndGlobal

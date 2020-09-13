@@ -1,11 +1,17 @@
 ﻿using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Pipeline
 {
-    public class PipelineManager
+    public interface IPipelineManager
     {
-        public PipelineRunner Configure(PipelineConfigurationBase pipelineConfiguration)
+        PipelineRunner Configure(PipelineConfigurationBase pipelineConfiguration);
+    }
+
+    public class PipelineManager : IPipelineManager
+    {
+        public virtual PipelineRunner Configure(PipelineConfigurationBase pipelineConfiguration)
         {
             var context = new PipelineContext();
 
@@ -13,7 +19,12 @@ namespace Pipeline
         }
     }
 
-    public class PipelineRunner
+    public interface IPipelineRunner
+    {
+        Task<bool> Run(CancellationToken cancellationToken = default(CancellationToken));
+    }
+
+    public class PipelineRunner : IPipelineRunner
     {
         private readonly PipelineConfigurationBase _pipelineConfiguration;
         private readonly PipelineContext _pipelineContext;
@@ -24,7 +35,7 @@ namespace Pipeline
             _pipelineContext = pipelineContext;
         }
 
-        public bool Run(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<bool> Run(CancellationToken cancellationToken = default(CancellationToken))
         {
             InitGlobalVariable();
 
@@ -38,7 +49,7 @@ namespace Pipeline
 
                 if (pip is IPipeline pipeline)
                 {
-                    pipeline.Execute(_pipelineContext, cancellationToken);
+                    await pipeline.Execute(_pipelineContext, cancellationToken);
                 }
                 else
                 {
@@ -50,7 +61,9 @@ namespace Pipeline
                         var command = stepConfiguration.GetType().GetProperty("Command").GetValue(stepConfiguration);
 
                         var method = type.GetMethod("Execute");
-                        method.Invoke(pip, new object[] { command, _pipelineContext, cancellationToken });
+                        Task task = (Task) method.Invoke(pip, new object[] { command, _pipelineContext, cancellationToken });
+
+                        await task.ConfigureAwait(false);
                     }
                     else
                     {

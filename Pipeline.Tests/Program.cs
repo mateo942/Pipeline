@@ -18,10 +18,19 @@ namespace Pipeline.Tests
         static async Task Run()
         {
             var configuration = new PipelineConfiguration()
+                   .AddGlobalVariable("ID", Guid.NewGuid())
                    .NextStep(new StepOne())
                    .NextStep(new StepGlobalVariable())
                    .NextStep(new StepShowMessageFromCommand(), new StepCommand() { Message = "Hello world" })
-                   .NextStep(new StepLocalVariable(), new Variables { { "MESSAGE", "Hello from variables" } });
+                   .NextStep(new StepLocalVariable(), new Variables { { "MESSAGE", "Hello from variables" } })
+                   .AddAlwaysEnd(x =>
+                   {
+                       Console.WriteLine("----------- END -----------");
+                   })
+                   .AddBeforeStart(x =>
+                   {
+                       Console.WriteLine("----------- START -----------");
+                   });
 
             var manager = new PipelineManager();
 
@@ -44,6 +53,7 @@ namespace Pipeline.Tests
             var provider = serviceCollection.BuildServiceProvider();
 
             var configuration = new PipelineConfiguration()
+                   .AddGlobalVariable("ID", Guid.NewGuid())
                    .NextStep<StepOne>()
                    .NextStep<StepGlobalVariable>()
                    .NextStep<StepShowMessageFromCommand, StepCommand>(new StepCommand() { Message = "Hello world" })
@@ -80,8 +90,9 @@ namespace Pipeline.Tests
         public Task Execute(PipelineContext pipelineContext, CancellationToken cancellationToken)
         {
             var dateStart = pipelineContext.GlobalVariables.Get<DateTime>("DATE_START");
+            var id = pipelineContext.GetVariable<Guid>("ID");
 
-            Console.WriteLine("Date start: {0}", dateStart);
+            Console.WriteLine("ID: {0}, Date start: {1}", id, dateStart);
 
             return Task.CompletedTask;
         }

@@ -26,6 +26,8 @@ namespace Pipeline
 
     public class PipelineRunner : IPipelineRunner
     {
+        internal const string DATE_START = "DATE_START";
+
         private readonly PipelineConfigurationBase _pipelineConfiguration;
         private readonly PipelineContext _pipelineContext;
 
@@ -37,40 +39,55 @@ namespace Pipeline
 
         public async Task<bool> Run(CancellationToken cancellationToken = default(CancellationToken))
         {
-            InitGlobalVariable();
-
-            IStepConfiguration stepConfiguration;
-            while ((stepConfiguration = _pipelineConfiguration.GetNext()) != null && cancellationToken.IsCancellationRequested == false)
+            try
             {
-                _pipelineContext.ClearLocalVariable();
-                _pipelineContext.SetLocalVariable(stepConfiguration.LocalVariable);
+                InitGlobalVariable();
 
-                var pip = GetPipelineObject(stepConfiguration);
+                _pipelineConfiguration.BeforeStart?.Invoke(_pipelineContext);
 
-                if (pip is IPipeline pipeline)
+                IStepConfiguration stepConfiguration;
+                while ((stepConfiguration = _pipelineConfiguration.GetNext()) != null && cancellationToken.IsCancellationRequested == false)
                 {
-                    await pipeline.Execute(_pipelineContext, cancellationToken);
-                }
-                else
-                {
-                    var type = pip.GetType();
-                    var genericInterface = type.GetInterface(typeof(IPipeline<>).Name);
+                    _pipelineContext.ClearLocalVariable();
+                    _pipelineContext.SetLocalVariable(stepConfiguration.LocalVariable);
 
-                    if (genericInterface != null)
+                    _pipelineConfiguration.BeforeStep?.Invoke(_pipelineContext);
+
+                    var pip = GetPipelineObject(stepConfiguration);
+
+                    if (pip is IPipeline pipeline)
                     {
-                        var command = stepConfiguration.GetType().GetProperty("Command").GetValue(stepConfiguration);
-
-                        var method = type.GetMethod("Execute");
-                        Task task = (Task) method.Invoke(pip, new object[] { command, _pipelineContext, cancellationToken });
-
-                        await task.ConfigureAwait(false);
+                        await pipeline.Execute(_pipelineContext, cancellationToken);
                     }
                     else
                     {
-                        throw new InvalidOperationException();
+                        var type = pip.GetType();
+                        var genericInterface = type.GetInterface(typeof(IPipeline<>).Name);
+
+                        if (genericInterface != null)
+                        {
+                            var command = stepConfiguration.GetType().GetProperty("Command").GetValue(stepConfiguration);
+
+                            var method = type.GetMethod("Execute");
+                            Task task = (Task)method.Invoke(pip, new object[] { command, _pipelineContext, cancellationToken });
+
+                            await task.ConfigureAwait(false);
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException();
+                        }
                     }
+                    _pipelineConfiguration.AfterStep?.Invoke(_pipelineContext);
                 }
+
+                _pipelineConfiguration.AfterEnd?.Invoke(_pipelineContext);
             }
+            finally
+            {
+                _pipelineConfiguration.AlwaysEnd?.Invoke(_pipelineContext);
+            }
+            
 
             return true;
         }
@@ -84,7 +101,9 @@ namespace Pipeline
         {
             var v = _pipelineContext.GlobalVariables;
 
-            v.Add("DATE_START", DateTime.UtcNow);
+            v.Add(DATE_START, DateTime.UtcNow);
+
+            v.AddRange(_pipelineConfiguration.GlobalVariable);
         }
     }
 }

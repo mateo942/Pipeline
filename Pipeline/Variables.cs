@@ -11,7 +11,7 @@ namespace Pipeline
         {
         }
 
-        public void AddRange(IDictionary<string, string> v)
+        public void AddRange(IDictionary<string, object> v)
         {
             if (v == null)
                 return;
@@ -26,12 +26,24 @@ namespace Pipeline
         {
             if (this.TryGetValue(key, out object t))
             {
-                var result = (T)Convert.ChangeType(t, typeof(T));
+                T result;
+                if(t is string tString && typeof(T) != typeof(string))
+                {
+                    result = (T)TypeDescriptor.GetConverter(typeof(T)).ConvertFromInvariantString(tString);
+                }
+                else if(t is T)
+                {
+                    result = (T)t;
+                } else
+                {
+                    result = (T)Convert.ChangeType(t, typeof(T));
+
+                }
 
                 return result;
             }
 
-            return default;
+            throw new KeyNotFoundException($"Key: {key}");
         }
 
         public bool TryGet<T>(string key, out T @out)
@@ -49,6 +61,25 @@ namespace Pipeline
             }
         }
 
+        public bool TryGetEnumerate<T>(string key, out IEnumerable<T> @out)
+        {
+            if(TryGet<IEnumerable<T>>(key, out @out))
+            {
+                return true;
+            }
+
+            if(TryGet<T>(key, out T @singleOut))
+            {
+                var tmp = new T[1];
+                tmp[0] = singleOut;
+
+                @out = tmp;
+                return true;
+            }
+
+            return false;
+        }
+
         public T Get<T>(string key, T defaultValue)
         {
             var r = Get<T>(key);
@@ -64,6 +95,20 @@ namespace Pipeline
         public void Set<T>(string key, T value)
         {
             this[key] = value;
+        }
+
+        public List<T> AddElementToList<T>(string key, T value)
+        {
+            var list = Get<List<T>>(key);
+            if(list == null)
+            {
+                list = new List<T>();
+                Set(key, list);
+            }
+
+            list.Add(value);
+
+            return list;
         }
     }
 }

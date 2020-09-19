@@ -32,6 +32,16 @@ namespace Pipeline
         //Instance\Type, Local variable, command
         private readonly Queue<IStepConfiguration> _queue;
 
+        private readonly Variables _variables = new Variables();
+        public override Variables GlobalVariable => _variables;
+
+
+        public override Action<PipelineContext> BeforeStart { get; protected set; }
+        public override Action<PipelineContext> BeforeStep { get; protected set; }
+        public override Action<PipelineContext> AfterStep { get; protected set; }
+        public override Action<PipelineContext> AfterEnd { get; protected set; }
+        public override Action<PipelineContext> AlwaysEnd { get; protected set; }
+
         #region Instance
         public PipelineConfiguration()
         {
@@ -115,12 +125,54 @@ namespace Pipeline
         }
         #endregion
 
+        public PipelineConfiguration AddGlobalVariable<T>(string key, T value)
+        {
+            _variables.Set(key, value);
+            return this;
+        }
+        public PipelineConfiguration AddGlobalVariables(IDictionary<string, object> v)
+        {
+            _variables.AddRange(v);
+
+            return this;
+        }
+
         public override IStepConfiguration GetNext()
         {
             if (_queue.Count == 0)
                 return null;
 
             return _queue.Dequeue();
+        }
+
+        public PipelineConfiguration AddBeforeStart(Action<PipelineContext> action)
+        {
+            BeforeStart = action;
+            return this;
+        }
+
+        public PipelineConfiguration AddBeforeStep(Action<PipelineContext> action)
+        {
+            BeforeStep = action;
+            return this;
+        }
+
+        public PipelineConfiguration AddAfterStep(Action<PipelineContext> action)
+        {
+            AfterStep = action;
+            return this;
+        }
+
+        public PipelineConfiguration AddAfterEnd(Action<PipelineContext> action)
+        {
+            AfterEnd = action;
+            return this;
+        }
+
+        public PipelineConfiguration AddAlwaysEnd(Action<PipelineContext> action)
+        {
+            AlwaysEnd = action;
+            return this;
         }
     }
 }

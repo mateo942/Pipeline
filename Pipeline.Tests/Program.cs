@@ -19,10 +19,12 @@ namespace Pipeline.Tests
         {
             var configuration = new PipelineConfiguration()
                    .AddGlobalVariable("ID", Guid.NewGuid())
-                   .NextStep(new StepOne())
+                   .NextStep(new StepOne(), Variables.Empty)
                    .NextStep(new StepGlobalVariable())
                    .NextStep(new StepShowMessageFromCommand(), new StepCommand() { Message = "Hello world" })
                    .NextStep(new StepLocalVariable(), new Variables { { "MESSAGE", "Hello from variables" } })
+                   .NextStep(new StepAddObjectScope())
+                   .NextStep(new StepReadScope(), Variables.Empty, "MAIN")
                    .AddAlwaysEnd(x =>
                    {
                        Console.WriteLine("----------- END -----------");
@@ -49,6 +51,8 @@ namespace Pipeline.Tests
             serviceCollection.AddTransient<StepShowMessageFromCommand>();
             serviceCollection.AddScoped<StepDiHelp>();
             serviceCollection.AddScoped<StepDI>();
+            serviceCollection.AddScoped<StepAddObjectScope>();
+            serviceCollection.AddScoped<StepReadScope>();
 
             var provider = serviceCollection.BuildServiceProvider();
 
@@ -58,7 +62,9 @@ namespace Pipeline.Tests
                    .NextStep<StepGlobalVariable>()
                    .NextStep<StepShowMessageFromCommand, StepCommand>(new StepCommand() { Message = "Hello world" })
                    .NextStep<StepLocalVariable>(new Variables { { "MESSAGE", "Hello from variables" } })
-                   .NextStep<StepDI>();
+                   .NextStep<StepDI>()
+                   .NextStep<StepAddObjectScope>()
+                   .NextStep<StepReadScope>(Variables.Empty, "MAIN");
 
 
             using (var scope = provider.CreateScope())
@@ -140,7 +146,6 @@ namespace Pipeline.Tests
         }
     }
 
-
     public class StepDI : IPipeline
     {
         private readonly StepDiHelp _stepDiHelp;
@@ -153,6 +158,33 @@ namespace Pipeline.Tests
         public Task Execute(PipelineContext pipelineContext, CancellationToken cancellationToken)
         {
             Console.WriteLine("Message form DI: {0}", _stepDiHelp.GetMessage());
+
+            return Task.CompletedTask;
+        }
+    }
+
+    public class StepAddObjectScope : IPipeline
+    {
+        public Task Execute(PipelineContext pipelineContext, CancellationToken cancellationToken)
+        {
+            pipelineContext.AddObjectToScope("MAIN", Guid.NewGuid());
+            pipelineContext.AddObjectToScope("MAIN", "HELLO WORLD");
+            pipelineContext.AddObjectToScope("ANOTHER", "HELLO MARS");
+
+            return Task.CompletedTask;
+        }
+    }
+
+    public class StepReadScope : IPipeline
+    {
+        public Task Execute(PipelineContext pipelineContext, CancellationToken cancellationToken)
+        {
+            var objects = pipelineContext.Scope.GetObjects();
+
+            foreach (var item in objects)
+            {
+                Console.WriteLine("Object: {0}", item);
+            }
 
             return Task.CompletedTask;
         }

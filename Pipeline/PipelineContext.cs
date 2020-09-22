@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace Pipeline
 {
@@ -11,10 +10,15 @@ namespace Pipeline
         public Variables GlobalVariables { get; private set; }
         public Variables LocalVariables { get; private set; }
 
+        public PipelineScope Scope { get; internal set; }
+
+        internal readonly IDictionary<string, PipelineScope> Scopes;
+
         public PipelineContext()
         {
             GlobalVariables = new Variables();
             Id = Guid.NewGuid();
+            Scopes = new Dictionary<string, PipelineScope>();
         }
 
         internal void SetLocalVariable(Variables localVariable) 
@@ -47,5 +51,29 @@ namespace Pipeline
 
             throw new KeyNotFoundException($"Key: {key}");
         }
+
+        #region Scopes
+        public void AddObjectToScope(string name, object value)
+        {
+            if(!Scopes.TryGetValue(name, out PipelineScope scope))
+            {
+                scope = new PipelineScope(name);
+                Scopes.Add(name, scope);
+            }
+
+            scope.AddObject(value);
+        }
+
+        internal void SetCurrentScope(string name)
+        {
+            if (!Scopes.TryGetValue(name, out PipelineScope scope))
+            {
+                scope = new PipelineScope(name);
+                Scopes.Add(name, scope);
+            }
+
+            Scope = scope;
+        }
+        #endregion
     }
 }

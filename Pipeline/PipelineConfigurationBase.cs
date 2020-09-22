@@ -6,6 +6,8 @@ namespace Pipeline
 {
     public interface IStepConfiguration
     {
+        string Scope { get; }
+
         object Instance { get; }
         Variables LocalVariable { get; }
     }

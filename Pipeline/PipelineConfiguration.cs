@@ -6,20 +6,22 @@ namespace Pipeline
 {
     public class StepConfiguration : IStepConfiguration
     {
-        public StepConfiguration(object instance, Variables localVariable)
+        public StepConfiguration(object instance, Variables localVariable, string scope)
         {
             Instance = instance;
             LocalVariable = localVariable;
+            Scope = scope;
         }
 
         public object Instance { get; }
         public Variables LocalVariable { get; }
+        public string Scope { get; }
     }
 
     public class StepConfigurationWithCommand<T> : StepConfiguration, IStepConfiguration<T> where T : IPipelineCommand
     {
-        public StepConfigurationWithCommand(object instance, Variables localVariable, T command) 
-            : base(instance, localVariable)
+        public StepConfigurationWithCommand(object instance, Variables localVariable, string scope, T command) 
+            : base(instance, localVariable, scope)
         {
             Command = command;
         }
@@ -50,12 +52,17 @@ namespace Pipeline
 
         public PipelineConfiguration NextStep(IPipeline pipeline)
         {
-            return NextStep(pipeline, new Variables());
+            return NextStep(pipeline, Variables.Empty);
         }
 
         public PipelineConfiguration NextStep(IPipeline pipeline, Variables variables)
         {
-            var p = new StepConfiguration(pipeline, variables);
+            return NextStep(pipeline, variables, string.Empty);
+        }
+
+        public PipelineConfiguration NextStep(IPipeline pipeline, Variables variables, string scope)
+        {
+            var p = new StepConfiguration(pipeline, variables, scope);
             _queue.Enqueue(p);
 
             return this;
@@ -63,12 +70,17 @@ namespace Pipeline
 
         public PipelineConfiguration NextStep<T>(IPipeline<T> pipeline, T command) where T : IPipelineCommand
         {
-            return NextStep<T>(pipeline, new Variables(), command);
+            return NextStep<T>(pipeline, string.Empty, command);
         }
 
-        public PipelineConfiguration NextStep<T>(IPipeline<T> pipeline, Variables variables, T command) where T : IPipelineCommand
+        public PipelineConfiguration NextStep<T>(IPipeline<T> pipeline, string scope, T command) where T : IPipelineCommand
         {
-            var p = new StepConfigurationWithCommand<T>(pipeline, variables, command);
+            return NextStep<T>(pipeline, Variables.Empty, scope, command);
+        }
+
+        public PipelineConfiguration NextStep<T>(IPipeline<T> pipeline, Variables variables, string scope, T command) where T : IPipelineCommand
+        {
+            var p = new StepConfigurationWithCommand<T>(pipeline, variables, scope, command);
             _queue.Enqueue(p);
 
             return this;
@@ -78,7 +90,7 @@ namespace Pipeline
         #region Type
         public PipelineConfiguration NextStep<TPipeline>()
         {
-            return NextStep<TPipeline>(new Variables());
+            return NextStep<TPipeline>(Variables.Empty);
         }
 
         public PipelineConfiguration NextStep<TPipeline>(Variables variables)
@@ -88,14 +100,27 @@ namespace Pipeline
             return NextStep(type, variables);
         }
 
+        public PipelineConfiguration NextStep<TPipeline>(Variables variables, string scope)
+        {
+            var type = typeof(TPipeline);
+
+            return NextStep(type, variables, scope);
+        }
+
         public PipelineConfiguration NextStep(Type pipeline)
         {
-            return NextStep(pipeline, new Variables());
+            return NextStep(pipeline, Variables.Empty);
         }
 
         public PipelineConfiguration NextStep(Type pipeline, Variables variables)
         {
-            var p = new StepConfiguration(pipeline, variables);
+            return NextStep(pipeline, variables, string.Empty);
+
+        }
+
+        public PipelineConfiguration NextStep(Type pipeline, Variables variables, string scope)
+        {
+            var p = new StepConfiguration(pipeline, variables, scope);
             _queue.Enqueue(p);
 
             return this;
@@ -111,14 +136,24 @@ namespace Pipeline
             return NextStep<T>(typeof(TPipeline), variables, command);
         }
 
+        public PipelineConfiguration NextStep<TPipeline, T>(T command, Variables variables, string scope) where T : IPipelineCommand
+        {
+            return NextStep<T>(typeof(TPipeline), variables, scope, command);
+        }
+
         public PipelineConfiguration NextStep<T>(Type pipeline, T command) where T : IPipelineCommand
         {
-            return NextStep<T>(pipeline, new Variables(), command);
+            return NextStep<T>(pipeline, Variables.Empty, command);
         }
 
         public PipelineConfiguration NextStep<T>(Type pipeline, Variables variables, T command) where T : IPipelineCommand
         {
-            var p = new StepConfigurationWithCommand<T>(pipeline, variables, command);
+            return NextStep<T>(pipeline, variables, string.Empty, command);
+        }
+
+        public PipelineConfiguration NextStep<T>(Type pipeline, Variables variables, string scope, T command) where T : IPipelineCommand
+        {
+            var p = new StepConfigurationWithCommand<T>(pipeline, variables, scope, command);
             _queue.Enqueue(p);
 
             return this;

@@ -7,6 +7,9 @@ namespace Pipeline
 {
     public class Variables : Dictionary<string, object>
     {
+        public static Variables Empty
+            => new Variables();
+
         public Variables()
         {
         }
@@ -82,14 +85,16 @@ namespace Pipeline
 
         public T Get<T>(string key, T defaultValue)
         {
-            var r = Get<T>(key);
-            if (r.Equals(default(T)))
+            try
+            {
+                var r = Get<T>(key);
+                return r;
+            }
+            catch
             {
                 Set<T>(key, defaultValue);
                 return defaultValue;
             }
-
-            return r;
         }
 
         public void Set<T>(string key, T value)

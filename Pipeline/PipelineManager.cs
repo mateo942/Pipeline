@@ -50,6 +50,7 @@ namespace Pipeline
                 {
                     _pipelineContext.ClearLocalVariable();
                     _pipelineContext.SetLocalVariable(stepConfiguration.LocalVariable);
+                    _pipelineContext.SetCurrentScope(stepConfiguration.Scope);
 
                     _pipelineConfiguration.BeforeStep?.Invoke(_pipelineContext);
 

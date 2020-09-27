@@ -7,6 +7,9 @@ namespace Pipeline
     {
         public Guid Id { get; set; }
 
+        public string CurrentStepId { get; set; }
+        public IEnumerable<string> StepIds { get; }
+
         public Variables GlobalVariables { get; private set; }
         public Variables LocalVariables { get; private set; }
 
@@ -14,11 +17,12 @@ namespace Pipeline
 
         internal readonly IDictionary<string, PipelineScope> Scopes;
 
-        public PipelineContext()
+        public PipelineContext(IEnumerable<string> stepIds)
         {
             GlobalVariables = new Variables();
             Id = Guid.NewGuid();
             Scopes = new Dictionary<string, PipelineScope>();
+            StepIds = stepIds;
         }
 
         internal void SetLocalVariable(Variables localVariable) 

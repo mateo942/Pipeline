@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,7 +15,7 @@ namespace Pipeline
     {
         public virtual PipelineRunner Configure(PipelineConfigurationBase pipelineConfiguration)
         {
-            var context = new PipelineContext();
+            var context = new PipelineContext(pipelineConfiguration.GetSteps().Select(x => x.Id).ToArray());
 
             return new PipelineRunner(pipelineConfiguration, context);
         }
@@ -45,41 +47,70 @@ namespace Pipeline
 
                 _pipelineConfiguration.BeforeStart?.Invoke(_pipelineContext);
 
-                IStepConfiguration stepConfiguration;
-                while ((stepConfiguration = _pipelineConfiguration.GetNext()) != null && cancellationToken.IsCancellationRequested == false)
+                var steps = _pipelineConfiguration.GetSteps().ToArray();
+                string[] executedStep = new string[steps.Count()];
+
+                bool error = false;
+
+                List<Exception> exceptions = new List<Exception>();
+
+                for (int i = 0; i < steps.Length; i++)
                 {
-                    _pipelineContext.ClearLocalVariable();
-                    _pipelineContext.SetLocalVariable(stepConfiguration.LocalVariable);
-                    _pipelineContext.SetCurrentScope(stepConfiguration.Scope);
+                    IStepConfiguration stepConfiguration = steps[i];
 
-                    _pipelineConfiguration.BeforeStep?.Invoke(_pipelineContext);
-
-                    var pip = GetPipelineObject(stepConfiguration);
-
-                    if (pip is IPipeline pipeline)
+                    try
                     {
-                        await pipeline.Execute(_pipelineContext, cancellationToken);
-                    }
-                    else
-                    {
-                        var type = pip.GetType();
-                        var genericInterface = type.GetInterface(typeof(IPipeline<>).Name);
+                        _pipelineContext.CurrentStepId = stepConfiguration.Id;
 
-                        if (genericInterface != null)
+                        if (cancellationToken.IsCancellationRequested && (error == false || stepConfiguration.AlwaysRun))
+                            continue;
+
+                        _pipelineContext.ClearLocalVariable();
+                        _pipelineContext.SetLocalVariable(stepConfiguration.LocalVariable);
+                        _pipelineContext.SetCurrentScope(stepConfiguration.Scope);
+
+                        _pipelineConfiguration.BeforeStep?.Invoke(_pipelineContext);
+
+                        var pip = GetPipelineObject(stepConfiguration);
+
+                        if (pip is IPipeline pipeline)
                         {
-                            var command = stepConfiguration.GetType().GetProperty("Command").GetValue(stepConfiguration);
-
-                            var method = type.GetMethod("Execute");
-                            Task task = (Task)method.Invoke(pip, new object[] { command, _pipelineContext, cancellationToken });
-
-                            await task.ConfigureAwait(false);
+                            await pipeline.Execute(_pipelineContext, cancellationToken);
                         }
                         else
                         {
-                            throw new InvalidOperationException();
+                            var type = pip.GetType();
+                            var genericInterface = type.GetInterface(typeof(IPipeline<>).Name);
+
+                            if (genericInterface != null)
+                            {
+                                var command = stepConfiguration.GetType().GetProperty("Command").GetValue(stepConfiguration);
+
+                                var method = type.GetMethod("Execute");
+                                Task task = (Task)method.Invoke(pip, new object[] { command, _pipelineContext, cancellationToken });
+
+                                await task.ConfigureAwait(false);
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException();
+                            }
                         }
+
+                        executedStep[i] = stepConfiguration.Id;
+
+                        _pipelineConfiguration.AfterStep?.Invoke(_pipelineContext);
                     }
-                    _pipelineConfiguration.AfterStep?.Invoke(_pipelineContext);
+                    catch (Exception ex)
+                    {
+                        exceptions.Add(new PipelineException(ex.Message, stepConfiguration.Id, stepConfiguration.GetType().FullName, ex));
+                        error = true;
+                    }
+                }
+
+                if (error)
+                {
+                    throw new AggregatePipelineException(exceptions);
                 }
 
                 _pipelineConfiguration.AfterEnd?.Invoke(_pipelineContext);

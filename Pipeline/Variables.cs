@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Text;
 
 namespace Pipeline
@@ -71,7 +72,15 @@ namespace Pipeline
                 return true;
             }
 
-            if(TryGet<T>(key, out T @singleOut))
+            if (TryGet<string>(key, out string stringValue))
+            {
+                var values = stringValue.Split(';');
+
+                @out = values.Cast<T>();
+                return true;
+            }
+
+            if (TryGet<T>(key, out T @singleOut))
             {
                 var tmp = new T[1];
                 tmp[0] = singleOut;

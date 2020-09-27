@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Pipeline.DependencyInjection;
 using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,7 +22,7 @@ namespace Pipeline.Tests
                    .AddGlobalVariable("ID", Guid.NewGuid())
                    .NextStep(new StepOne(), Variables.Empty)
                    .NextStep(new StepGlobalVariable())
-                   .NextStep(new StepShowMessageFromCommand(), new StepCommand() { Message = "Hello world" })
+                   .NextStepWithCommand(new StepShowMessageFromCommand(), new StepCommand() { Message = "Hello world" })
                    .NextStep(new StepLocalVariable(), new Variables { { "MESSAGE", "Hello from variables" } })
                    .NextStep(new StepAddObjectScope())
                    .NextStep(new StepReadScope(), Variables.Empty, "MAIN")
@@ -53,6 +54,8 @@ namespace Pipeline.Tests
             serviceCollection.AddScoped<StepDI>();
             serviceCollection.AddScoped<StepAddObjectScope>();
             serviceCollection.AddScoped<StepReadScope>();
+            serviceCollection.AddScoped<Throw>();
+            serviceCollection.AddScoped<AlwaysRuning>();
 
             var provider = serviceCollection.BuildServiceProvider();
 
@@ -60,11 +63,14 @@ namespace Pipeline.Tests
                    .AddGlobalVariable("ID", Guid.NewGuid())
                    .NextStep<StepOne>()
                    .NextStep<StepGlobalVariable>()
-                   .NextStep<StepShowMessageFromCommand, StepCommand>(new StepCommand() { Message = "Hello world" })
+                   .NextStepWithCommand<StepShowMessageFromCommand, StepCommand>(new StepCommand() { Message = "Hello world" })
                    .NextStep<StepLocalVariable>(new Variables { { "MESSAGE", "Hello from variables" } })
                    .NextStep<StepDI>()
                    .NextStep<StepAddObjectScope>()
-                   .NextStep<StepReadScope>(Variables.Empty, "MAIN");
+                   .NextStep<StepReadScope>(Variables.Empty)
+                   .NextStep<Throw>(Variables.Empty)
+                   .NextStep<StepReadScope>(Variables.Empty)
+                   .NextStep<AlwaysRuning>(Variables.Empty, "MAIN", cfg => { cfg.AlwaysRun = true; });
 
 
             using (var scope = provider.CreateScope())
@@ -185,6 +191,24 @@ namespace Pipeline.Tests
             {
                 Console.WriteLine("Object: {0}", item);
             }
+
+            return Task.CompletedTask;
+        }
+    }
+
+    public class Throw : IPipeline
+    {
+        public Task Execute(PipelineContext pipelineContext, CancellationToken cancellationToken)
+        {
+            throw new NotFiniteNumberException();
+        }
+    }
+
+    public class AlwaysRuning : IPipeline
+    {
+        public Task Execute(PipelineContext pipelineContext, CancellationToken cancellationToken)
+        {
+            Console.WriteLine("Always");
 
             return Task.CompletedTask;
         }

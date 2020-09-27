@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Pipeline.DependencyInjection
@@ -16,7 +17,7 @@ namespace Pipeline.DependencyInjection
 
         public override PipelineRunner Configure(PipelineConfigurationBase pipelineConfiguration)
         {
-            var context = new PipelineContext();
+            var context = new PipelineContext(pipelineConfiguration.GetSteps().Select(x => x.Id).ToArray());
 
             return new PipelineRunnerDI(pipelineConfiguration, context, _serviceProvider);
         }

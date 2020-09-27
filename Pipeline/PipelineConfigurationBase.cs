@@ -6,10 +6,14 @@ namespace Pipeline
 {
     public interface IStepConfiguration
     {
+        string Id { get; }
+
         string Scope { get; }
 
         object Instance { get; }
         Variables LocalVariable { get; }
+
+        bool AlwaysRun { get; set; }
     }
 
     public interface IStepConfiguration<T> : IStepConfiguration where T : IPipelineCommand
@@ -21,7 +25,7 @@ namespace Pipeline
     {
         public abstract Variables GlobalVariable { get; }
 
-        public abstract IStepConfiguration GetNext();
+        public abstract IEnumerable<IStepConfiguration> GetSteps();
 
         public abstract Action<PipelineContext> BeforeStart { get; protected set; }
         public abstract Action<PipelineContext> BeforeStep { get; protected set; }
